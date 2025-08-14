@@ -13,7 +13,7 @@
 #   --ruby <VER>        Ruby image tag (default: 3.4.2)
 #   --rubygems <VER>    RubyGems version (default: 3.6.5)
 #   --bundler <VER>     Bundler version (default: 2.6.5)
-#   --branch <NAME>     Git branch to commit to (default: prebuild-ruby)
+#   --branch <NAME>     Git branch to commit to (default: prebuilt-ruby)
 #   --no-commit         Build only; do not commit
 #   --push              Push the branch after committing
 #   --image <TAG>       Override Docker image (default: ruby:<RUBY>-bullseye)
@@ -81,7 +81,7 @@ if [[ ${PLATFORM_SET} -eq 0 ]]; then
   PLATFORM="${DEFAULT_PLATFORM}"
 fi
 if [[ ${BRANCH_SET} -eq 0 ]]; then
-  BRANCH="prebuild-ruby"
+  BRANCH="prebuilt-ruby"
 fi
 if [[ ${OUT_SET} -eq 0 ]]; then
   OUT_SO="bindings/ruby/vendor/native/${TARGET}/regorusrb.so"
@@ -186,7 +186,7 @@ if [[ "${DO_COMMIT}" -eq 1 ]]; then
   else
     git checkout -b "${BRANCH}"
   fi
-  git add "${OUT_SO}"
+  git add -f "${OUT_SO}"
   git commit -m "Add prebuilt ${TARGET} regorusrb.so (Ruby ${RUBY_VER}, RubyGems ${RUBYGEMS_VER}, Bundler ${BUNDLER_VER})" || true
   if [[ "${DO_PUSH}" -eq 1 ]]; then
     git push -u origin "${BRANCH}"
