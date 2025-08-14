@@ -13,10 +13,10 @@
 #   --ruby <VER>        Ruby image tag (default: 3.4.2)
 #   --rubygems <VER>    RubyGems version (default: 3.6.5)
 #   --bundler <VER>     Bundler version (default: 2.6.5)
-#   --branch <NAME>     Git branch to commit to (default: prebuilt-<target>)
+#   --branch <NAME>     Git branch to commit to (default: prebuild-ruby)
 #   --no-commit         Build only; do not commit
 #   --push              Push the branch after committing
-#   --image <TAG>       Override Docker image (default: ruby:<RUBY>-bookworm)
+#   --image <TAG>       Override Docker image (default: ruby:<RUBY>-bullseye)
 #   --platform <PLAT>   Docker platform (default depends on --target)
 #   --ext <PATH>        Extension dir (default: bindings/ruby/ext/regorusrb)
 #   --out <PATH>        Output .so path (default: bindings/ruby/vendor/native/<target>/regorusrb.so)
@@ -58,6 +58,11 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+# Normalize aliases
+if [[ "${TARGET}" == "arch64-linux" ]]; then
+  TARGET="aarch64-linux"
+fi
+
 # Validate target and set implied defaults if not overridden
 case "${TARGET}" in
   aarch64-linux)
@@ -76,7 +81,7 @@ if [[ ${PLATFORM_SET} -eq 0 ]]; then
   PLATFORM="${DEFAULT_PLATFORM}"
 fi
 if [[ ${BRANCH_SET} -eq 0 ]]; then
-  BRANCH="prebuilt-${TARGET}"
+  BRANCH="prebuild-ruby"
 fi
 if [[ ${OUT_SET} -eq 0 ]]; then
   OUT_SO="bindings/ruby/vendor/native/${TARGET}/regorusrb.so"
@@ -94,7 +99,7 @@ fi
 
 mkdir -p "$(dirname "${OUT_SO}")"
 
-IMAGE="${IMAGE_OVERRIDE:-ruby:${RUBY_VER}-bookworm}"
+IMAGE="${IMAGE_OVERRIDE:-ruby:${RUBY_VER}-bullseye}"
 echo "==> Checking Docker image: ${IMAGE}"
 if ! docker manifest inspect "${IMAGE}" >/dev/null 2>&1; then
   echo "!! Could not find '${IMAGE}'. Falling back to ruby:${RUBY_VER}" >&2
