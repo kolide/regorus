@@ -20,7 +20,7 @@ Gem::Specification.new do |spec|
   spec.metadata["changelog_uri"] = "#{spec.homepage}/blob/main/bindings/ruby/CHANGELOG.md"
   spec.metadata["rubygems_mfa_required"] = "true"
 
-  spec.files = Dir["lib/*.rb", "lib/regorus/*.rb", "ext/**/*.{rs,rb,lock,toml}", "Cargo.{lock,toml}", "LICENSE.txt", "README.md"]
+  spec.files = Dir["lib/*.rb", "lib/regorus/*.rb", "ext/**/*.{rs,rb,lock,toml}", "Cargo.{lock,toml}", "LICENSE*", "README.md", "vendor/native/**/*"]
 
   spec.bindir = "exe"
   spec.executables = spec.files.grep(%r{\Aexe/}) { |f| File.basename(f) }
