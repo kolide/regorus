@@ -1,54 +1,86 @@
 #!/usr/bin/env bash
-# Build the aarch64-linux shared object for regorusrb inside Docker.
+# Build the <target>-linux shared object for regorusrb inside Docker.
 # The artifact is placed at:
-#   bindings/ruby/vendor/native/aarch64-linux/regorusrb.so
+#   bindings/ruby/vendor/native/<target>/regorusrb.so
 #
 # Usage:
-#   ./scripts/precompile_aarch64.sh
-#   ./scripts/precompile_aarch64.sh --push
-#   ./scripts/precompile_aarch64.sh --ruby 3.4.2 --rubygems 3.6.5 --bundler 2.6.5
+#   ./scripts/precompile_ruby.sh [--target aarch64-linux|x86_64-linux] [flags]
+#   ./scripts/precompile_ruby.sh --push
+#   ./scripts/precompile_ruby.sh --ruby 3.4.2 --rubygems 3.6.5 --bundler 2.6.5
 #
 # Flags:
+#   --target <ARCH>     Target arch (default: x86_64-linux)
 #   --ruby <VER>        Ruby image tag (default: 3.4.2)
 #   --rubygems <VER>    RubyGems version (default: 3.6.5)
 #   --bundler <VER>     Bundler version (default: 2.6.5)
-#   --branch <NAME>     Git branch to commit to (default: prebuilt-aarch64)
+#   --branch <NAME>     Git branch to commit to (default: prebuilt-<target>)
 #   --no-commit         Build only; do not commit
 #   --push              Push the branch after committing
 #   --image <TAG>       Override Docker image (default: ruby:<RUBY>-bookworm)
-#   --platform <PLAT>   Docker platform (default: linux/arm64)
+#   --platform <PLAT>   Docker platform (default depends on --target)
 #   --ext <PATH>        Extension dir (default: bindings/ruby/ext/regorusrb)
-#   --out <PATH>        Output .so path (default: bindings/ruby/vendor/native/aarch64-linux/regorusrb.so)
+#   --out <PATH>        Output .so path (default: bindings/ruby/vendor/native/<target>/regorusrb.so)
 
 set -Eeuo pipefail
 
 RUBY_VER="3.4.2"
 RUBYGEMS_VER="3.6.5"
 BUNDLER_VER="2.6.5"
-BRANCH="prebuilt-aarch64"
+TARGET="x86_64-linux"
+BRANCH=""
 DO_COMMIT=1
 DO_PUSH=0
-PLATFORM="linux/arm64"
+PLATFORM=""
 EXT_DIR="bindings/ruby/ext/regorusrb"
-OUT_SO="bindings/ruby/vendor/native/aarch64-linux/regorusrb.so"
+OUT_SO=""
 IMAGE_OVERRIDE=""
+
+# Track whether user explicitly set these so we can compute sensible defaults later
+BRANCH_SET=0
+PLATFORM_SET=0
+OUT_SET=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --target) TARGET="$2"; shift 2 ;;
     --ruby) RUBY_VER="$2"; shift 2 ;;
     --rubygems) RUBYGEMS_VER="$2"; shift 2 ;;
     --bundler) BUNDLER_VER="$2"; shift 2 ;;
-    --branch) BRANCH="$2"; shift 2 ;;
+    --branch) BRANCH="$2"; BRANCH_SET=1; shift 2 ;;
     --no-commit) DO_COMMIT=0; shift ;;
     --push) DO_PUSH=1; shift ;;
     --image) IMAGE_OVERRIDE="$2"; shift 2 ;;
-    --platform) PLATFORM="$2"; shift 2 ;;
+    --platform) PLATFORM="$2"; PLATFORM_SET=1; shift 2 ;;
     --ext) EXT_DIR="$2"; shift 2 ;;
-    --out) OUT_SO="$2"; shift 2 ;;
-    -h|--help) sed -n '1,120p' "$0"; exit 0 ;;
+    --out) OUT_SO="$2"; OUT_SET=1; shift 2 ;;
+    -h|--help) sed -n '1,140p' "$0"; exit 0 ;;
     *) echo "Unknown arg: $1" >&2; exit 2 ;;
   esac
 done
+
+# Validate target and set implied defaults if not overridden
+case "${TARGET}" in
+  aarch64-linux)
+    DEFAULT_PLATFORM="linux/arm64"
+    ;;
+  x86_64-linux)
+    DEFAULT_PLATFORM="linux/amd64"
+    ;;
+  *)
+    echo "Unsupported --target '${TARGET}'. Use 'aarch64-linux' or 'x86_64-linux'." >&2
+    exit 2
+    ;;
+ esac
+
+if [[ ${PLATFORM_SET} -eq 0 ]]; then
+  PLATFORM="${DEFAULT_PLATFORM}"
+fi
+if [[ ${BRANCH_SET} -eq 0 ]]; then
+  BRANCH="prebuilt-${TARGET}"
+fi
+if [[ ${OUT_SET} -eq 0 ]]; then
+  OUT_SO="bindings/ruby/vendor/native/${TARGET}/regorusrb.so"
+fi
 
 if ! command -v docker >/dev/null 2>&1; then
   echo "Docker is required." >&2; exit 1
@@ -71,6 +103,7 @@ fi
 
 cat <<CFG
 ==> Build configuration
+    Target      : ${TARGET}
     Platform    : ${PLATFORM}
     Docker image: ${IMAGE}
     Ruby        : ${RUBY_VER}
@@ -130,9 +163,9 @@ docker run --rm -t \
 
     file "${SO_CANDIDATE}" || true
 
-    echo "==> Copying artifact into bindings/ruby/vendor/native/aarch64-linux..."
-    mkdir -p ../../vendor/native/aarch64-linux
-    cp "${SO_CANDIDATE}" ../../vendor/native/aarch64-linux/regorusrb.so
+    echo "==> Copying artifact into bindings/ruby/vendor/native/'"${TARGET}"'..."
+    mkdir -p ../../vendor/native/'"${TARGET}"'
+    cp "${SO_CANDIDATE}" ../../vendor/native/'"${TARGET}"'/regorusrb.so
   '
 
 if [[ ! -f "${OUT_SO}" ]]; then
@@ -149,7 +182,7 @@ if [[ "${DO_COMMIT}" -eq 1 ]]; then
     git checkout -b "${BRANCH}"
   fi
   git add "${OUT_SO}"
-  git commit -m "Add prebuilt aarch64-linux regorusrb.so (Ruby ${RUBY_VER}, RubyGems ${RUBYGEMS_VER}, Bundler ${BUNDLER_VER})" || true
+  git commit -m "Add prebuilt ${TARGET} regorusrb.so (Ruby ${RUBY_VER}, RubyGems ${RUBYGEMS_VER}, Bundler ${BUNDLER_VER})" || true
   if [[ "${DO_PUSH}" -eq 1 ]]; then
     git push -u origin "${BRANCH}"
   fi

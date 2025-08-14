@@ -4,34 +4,29 @@ require "fileutils"
 require "mkmf"
 require "rb_sys/mkmf"
 
-def aarch64_linux?
-  cpu = RbConfig::CONFIG["host_cpu"]
-  os  = RbConfig::CONFIG["host_os"]
-  (cpu =~ /aarch64|arm64/) && (os =~ /linux/)
-end
+cpu = RbConfig::CONFIG["host_cpu"]
+os  = RbConfig::CONFIG["host_os"]
+arch =
+  if os =~ /linux/
+    if cpu =~ /aarch64|arm64/
+      "aarch64-linux"
+    elsif cpu =~ /x86_64|amd64/
+      "x86_64-linux"
+    end
+  end
 
-DLEXT    = RbConfig::CONFIG["DLEXT"]             # "so" on Linux
-# Prebuilt lives inside the repo (tracked), see step 2
-PREBUILT = File.expand_path("../../vendor/native/aarch64-linux/regorusrb.#{DLEXT}", __dir__)
+DLEXT = RbConfig::CONFIG["DLEXT"]            # "so" on Linux
+dest_dir = File.expand_path("../../../lib/regorus", __dir__)
+dest_so  = File.join(dest_dir, "regorusrb.#{DLEXT}")
+prebuilt = arch && File.expand_path("../../vendor/native/#{arch}/regorusrb.#{DLEXT}", __dir__)
 
-# Where Ruby will look for the extension when you `require "regorus/regorusrb"`
-DEST_DIR = File.expand_path("../../../lib/regorus", __dir__)
-DEST_SO  = File.join(DEST_DIR, "regorusrb.#{DLEXT}")
-
-if aarch64_linux? && File.exist?(PREBUILT)
-  # Use prebuilt: copy it into the gem's lib and emit a no-op Makefile
-  FileUtils.mkdir_p(DEST_DIR)
-  FileUtils.cp(PREBUILT, DEST_SO)
-
-  File.write("Makefile", <<~MK)
-    all:
-    install:
-    	@true
-    clean:
-    	@true
-  MK
+if prebuilt && File.exist?(prebuilt)
+  # Use prebuilt, no-op Makefile so bundler is happy.
+  FileUtils.mkdir_p(dest_dir)
+  FileUtils.cp(prebuilt, dest_so)
+  File.write("Makefile", "all:\ninstall:\n\t@true\nclean:\n\t@true\n")
 else
-  # Fallback: compile from Rust source (dev on macOS, CI, etc.)
+  # Fallback: compile (dev/mac, or if a prebuilt is missing)
   create_rust_makefile("regorus/regorusrb") do |r|
     r.auto_install_rust_toolchain = true
   end
