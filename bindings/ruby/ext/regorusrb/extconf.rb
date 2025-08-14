@@ -16,7 +16,7 @@ arch =
   end
 
 DLEXT = RbConfig::CONFIG["DLEXT"]            # "so" on Linux
-dest_dir = File.expand_path("../../../lib/regorus", __dir__)
+dest_dir = File.expand_path("../../lib/regorus", __dir__)
 dest_so  = File.join(dest_dir, "regorusrb.#{DLEXT}")
 prebuilt = arch && File.expand_path("../../vendor/native/#{arch}/regorusrb.#{DLEXT}", __dir__)
 
