@@ -23,12 +23,17 @@ jobs:
             target: x86_64-pc-windows-msvc
     runs-on: ${{ matrix.host.name }}
     steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit # Audit network and disk activity
+
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@7f4fc3e22c37d6ff65e88745f38bd3157c663f7c # v4.9.1
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           architecture: x64
@@ -48,7 +53,7 @@ jobs:
           sccache: 'true'
 
       - name: Upload Wheel
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: regorus-wheel-${{ matrix.host.name }}
           path: dist/regorus-*.whl
@@ -68,19 +73,24 @@ jobs:
     needs: build
     runs-on: ${{ matrix.host.name }}
     steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        with:
+          egress-policy: audit # Audit network and disk activity
+
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
 
       - name: Download Regorus wheel
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           path: wheels
           pattern: regorus-wheel-*
           merge-multiple: true
 
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@7f4fc3e22c37d6ff65e88745f38bd3157c663f7c # v4.9.1
         with:
           python-version: ${{ matrix.python-version }}
           architecture: x64
